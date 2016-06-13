@@ -1,0 +1,4 @@
+[submodule "grub"]
+	path = grub
+	url = https://github.com/jforissier/grub.git
+	branch = efinet-dhcp-proxy-offer-fix
