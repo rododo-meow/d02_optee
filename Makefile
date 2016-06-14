@@ -14,7 +14,7 @@ endif
 
 CROSS_COMPILE ?= "ccache aarch64-linux-gnu-"
 
-all: grub
+all: arm-trusted-firmware grub
 
 help:
 	@echo TODO
@@ -65,4 +65,34 @@ distclean-grub:
 	$(Q)rm -f grub/configure
 
 distclean: distclean-grub
+
+#
+# ARM Trusted Firmware
+#
+
+BL32=pouic.bin
+
+ARMTF_FLAGS := PLAT=d02
+ARMTF_FLAGS += SPD=opteed
+ARMTF_FLAGS += DEBUG=1
+#ARMTF_FLAGS += LOG_LEVEL=40
+
+ARMTF_EXPORTS += CROSS_COMPILE='"$(CROSS_COMPILE)"'
+ARMTF_EXPORTS += BL32=$(CURDIR)/$(BL32)
+
+define arm-tf-make
+	+$(Q)export $(ARMTF_EXPORTS) ; \
+		$(MAKE) -C arm-trusted-firmware $(ARMTF_FLAGS) $(1) $(2)
+endef
+
+.PHONY: arm-trusted-firmware
+arm-trusted-firmware:
+	$(ECHO) '  BUILD   $@'
+	$(call arm-tf-make, bl1 fip)
+
+clean-arm-trusted-firmware:
+	$(ECHO) '  CLEAN   $@'
+	$(call arm-tf-make, clean)
+
+clean: clean-arm-trusted-firmware
 
