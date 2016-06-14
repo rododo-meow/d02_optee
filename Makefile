@@ -12,9 +12,10 @@ else
   ECHO := @echo
 endif
 
-CROSS_COMPILE ?= "ccache aarch64-linux-gnu-"
+CROSS_COMPILE32 ?= ccache arm-linux-gnueabihf-
+CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 
-all: arm-trusted-firmware grub
+all: arm-trusted-firmware grub optee-os
 
 help:
 	@echo TODO
@@ -70,14 +71,14 @@ distclean: distclean-grub
 # ARM Trusted Firmware
 #
 
-BL32=pouic.bin
+BL32 = optee_os/out/arm-plat-d02/core/tee.bin
 
 ARMTF_FLAGS := PLAT=d02
 ARMTF_FLAGS += SPD=opteed
 ARMTF_FLAGS += DEBUG=1
 #ARMTF_FLAGS += LOG_LEVEL=40
 
-ARMTF_EXPORTS += CROSS_COMPILE='"$(CROSS_COMPILE)"'
+ARMTF_EXPORTS += CROSS_COMPILE='$(CROSS_COMPILE64)'
 ARMTF_EXPORTS += BL32=$(CURDIR)/$(BL32)
 
 define arm-tf-make
@@ -86,7 +87,7 @@ define arm-tf-make
 endef
 
 .PHONY: arm-trusted-firmware
-arm-trusted-firmware:
+arm-trusted-firmware: optee-os
 	$(ECHO) '  BUILD   $@'
 	$(call arm-tf-make, bl1 fip)
 
@@ -95,4 +96,27 @@ clean-arm-trusted-firmware:
 	$(call arm-tf-make, clean)
 
 clean: clean-arm-trusted-firmware
+
+#
+# OP-TEE OS
+#
+
+optee-os-flags := PLATFORM=d02
+optee-os-flags += DEBUG=0
+optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=2 # 0=none 1=err 2=info 3=debug 4=flow
+optee-os-flags += CFG_TEE_TA_LOG_LEVEL=3
+optee-os-flags += CFG_ARM64_core=y
+optee-os-flags += CROSS_COMPILE32="$(CROSS_COMPILE32)" CROSS_COMPILE64="$(CROSS_COMPILE64)"
+
+.PHONY: optee-os
+optee-os:
+	$(ECHO) '  BUILD   $@'
+	$(Q)$(MAKE) -C optee_os $(optee-os-flags)
+
+.PHONY: clean-optee-os
+clean-optee-os:
+	$(ECHO) '  CLEAN   $@'
+	$(Q)$(MAKE) -C optee_os $(optee-os-flags) clean
+
+clean: clean-optee-os
 
