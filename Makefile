@@ -139,6 +139,46 @@ clean-optee-client:
 clean: clean-optee-client
 
 #
+# OP-TEE tests (xtest)
+#
+
+optee-test-deps := optee-os
+
+optee-test-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE64)" \
+		    CROSS_COMPILE_TA="$(CROSS_COMPILE64)" \
+		    TA_DEV_KIT_DIR=$(CURDIR)/optee_os/out/arm-plat-d02/export-ta_arm64 \
+		    O=$(CURDIR)/optee_test/out
+#optee-test-flags += CFG_TEE_TA_LOG_LEVEL=3
+
+ifneq (,$(wildcard optee_test/TEE_Initial_Configuration-Test_Suite_v1_1_0_4-2014_11_07))
+GP_TESTS=1
+endif
+
+ifeq ($(GP_TESTS),1)
+optee-test-flags += CFG_GP_PACKAGE_PATH=$(CURDIR)/optee_test/TEE_Initial_Configuration-Test_Suite_v1_1_0_4-2014_11_07
+optee-test-flags += COMPILE_NS_USER=64
+optee-test-deps += optee-test-do-patch
+endif
+
+
+.PHONY: optee-test
+optee-test: $(optee-test-deps)
+	$(ECHO) '  BUILD   $@'
+	$(Q)$(MAKE) -C optee_test $(optee-test-flags)
+
+.PHONY: optee-test-do-patch
+optee-test-do-patch:
+	$(Q)$(MAKE) -C optee_test $(optee-test-flags) patch
+
+
+.PHONY: clean-optee-test
+clean-optee-test:
+	$(ECHO) '  CLEAN   $@'
+	$(Q)$(MAKE) -C optee_test $(optee-test-flags) clean
+
+clean: clean-optee-test
+
+#
 # Linux kernel
 #
 
