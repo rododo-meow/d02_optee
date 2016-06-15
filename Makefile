@@ -15,7 +15,7 @@ endif
 CROSS_COMPILE32 ?= ccache arm-linux-gnueabihf-
 CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 
-all: arm-trusted-firmware grub linux optee-os
+all: arm-trusted-firmware grub linux optee-client optee-os
 
 help:
 	@echo TODO
@@ -119,6 +119,24 @@ clean-optee-os:
 	$(Q)$(MAKE) -C optee_os $(optee-os-flags) clean
 
 clean: clean-optee-os
+
+#
+# OP-TEE client (libteec)
+#
+
+optee-client-flags := CROSS_COMPILE="$(CROSS_COMPILE64)"
+#optee-client-flags += CFG_TEE_SUPP_LOG_LEVEL=4 CFG_TEE_CLIENT_LOG_LEVEL=4
+
+.PHONY: optee-client
+optee-client:
+	$(ECHO) '  BUILD   $@'
+	$(Q)$(MAKE) -C optee_client $(optee-client-flags)
+
+clean-optee-client:
+	$(ECHO) '  CLEAN   $@'
+	$(Q)$(MAKE) -C optee_client $(optee-client-flags) clean
+
+clean: clean-optee-client
 
 #
 # Linux kernel
