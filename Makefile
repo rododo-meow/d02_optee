@@ -15,6 +15,15 @@ endif
 CROSS_COMPILE32 ?= ccache arm-linux-gnueabihf-
 CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 
+# Where the various Linux files get installed by "make install" (kernel
+# modules, TEE client library, test applications...).
+# This has to be merged with the root FS of the linux distribution you will
+# be using, for instance using:
+#  mount -t overlay overlay -olowerdir=/path/to/d02_optee/install,/path/to/Debian_ARM64_ro \
+#                           -oupperdir=/path/to/Debian_ARM64_rw /path/to/Debian_ARM64_merged
+
+INSTALL_DIR = install
+
 all: arm-trusted-firmware grub linux optee-client optee-os
 
 help:
@@ -132,6 +141,15 @@ optee-client:
 	$(ECHO) '  BUILD   $@'
 	$(Q)$(MAKE) -C optee_client $(optee-client-flags)
 
+.PHONY: install-optee-client
+install-optee-client: optee-client
+	$(ECHO) '  INSTALL $@'
+	$(Q)mkdir -p $(INSTALL_DIR)
+	$(Q)$(MAKE) -C optee_client $(optee-client-flags) install EXPORT_DIR=$(CURDIR)/$(INSTALL_DIR)
+
+install: install-optee-client
+
+.PHONY: clean-optee-client
 clean-optee-client:
 	$(ECHO) '  CLEAN   $@'
 	$(Q)$(MAKE) -C optee_client $(optee-client-flags) clean
@@ -171,6 +189,12 @@ optee-test-do-patch:
 	$(Q)$(MAKE) -C optee_test $(optee-test-flags) patch
 
 
+.PHONY: install-optee-test
+install-optee-test: optee-test
+	$(Q)$(MAKE) -C optee_test $(optee-test-flags) install DESTDIR=$(CURDIR)/$(INSTALL_DIR)
+
+install: install-optee-test
+
 .PHONY: clean-optee-test
 clean-optee-test:
 	$(ECHO) '  CLEAN   $@'
@@ -184,17 +208,18 @@ clean: clean-optee-test
 
 LINUX = linux/arch/arm64/boot/Image
 DTB = linux/arch/arm64/boot/dts/hisilicon/hip05-d02.dtb
-DISTRO_DIR = debian
 
 linux-flags := CROSS_COMPILE="$(CROSS_COMPILE64)" ARCH=arm64
 
 # Install modules and firmware files
-.PHONY: linux-install
-linux-install: linux
+.PHONY: install-linux
+install-linux: linux
 	$(ECHO) '  INSTALL $@'
-	$(Q)mkdir -p $(DISTRO_DIR)
-	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(CURDIR)/$(DISTRO_DIR)
-	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(CURDIR)/$(DISTRO_DIR)/lib/firmware
+	$(Q)mkdir -p $(INSTALL_DIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(CURDIR)/$(INSTALL_DIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(CURDIR)/$(INSTALL_DIR)/lib/firmware
+
+install: install-linux
 
 .PHONY: linux
 linux: linux/.config
