@@ -10,3 +10,7 @@
 	path = optee_os
 	url = https://github.com/jforissier/optee_os.git
 	branch = d02
+[submodule "linux"]
+	path = linux
+	url = https://github.com/jforissier/linux.git
+	branch = open-estuary-v2.2-rc1-optee

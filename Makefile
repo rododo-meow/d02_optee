@@ -15,7 +15,7 @@ endif
 CROSS_COMPILE32 ?= ccache arm-linux-gnueabihf-
 CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 
-all: arm-trusted-firmware grub optee-os
+all: arm-trusted-firmware grub linux optee-os
 
 help:
 	@echo TODO
@@ -119,4 +119,41 @@ clean-optee-os:
 	$(Q)$(MAKE) -C optee_os $(optee-os-flags) clean
 
 clean: clean-optee-os
+
+#
+# Linux kernel
+#
+
+LINUX = linux/arch/arm64/boot/Image
+DTB = linux/arch/arm64/boot/dts/hisilicon/hip05-d02.dtb
+DISTRO_DIR = debian
+
+linux-flags := CROSS_COMPILE="$(CROSS_COMPILE64)" ARCH=arm64
+
+# Install modules and firmware files
+.PHONY: linux-install
+linux-install: linux
+	$(ECHO) '  INSTALL $@'
+	$(Q)mkdir -p $(DISTRO_DIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(CURDIR)/$(DISTRO_DIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(CURDIR)/$(DISTRO_DIR)/lib/firmware
+
+.PHONY: linux
+linux: linux/.config
+	$(ECHO) '  BUILD   $@'
+	$(Q)$(MAKE) -C linux $(linux-flags) Image modules dtbs
+
+# FIXME: *lots* of modules are built uselessly
+linux/.config:
+	$(ECHO) '  GEN     $@'
+	$(Q)$(MAKE) -C linux $(linux-flags) defconfig
+	$(Q)cd linux ; ./scripts/config --enable TEE --enable OPTEE
+
+clean-linux:
+	$(ECHO) '  CLEAN   $@'
+	$(Q)$(MAKE) -C linux $(linux-flags) clean
+	$(ECHO) '  RM      linux/.config'
+	$(Q)rm -f linux/.config
+
+clean: clean-linux
 
