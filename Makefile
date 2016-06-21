@@ -7,9 +7,11 @@ SHELL = /bin/bash
 ifeq ($(V),1)
   Q :=
   ECHO := @:
+  _ECHO := :
 else
   Q := @
   ECHO := @echo
+  _ECHO := echo
 endif
 
 CROSS_COMPILE32 ?= ccache arm-linux-gnueabihf-
@@ -18,13 +20,22 @@ CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 # Where the various Linux files get installed by "make install" (kernel
 # modules, TEE client library, test applications...).
 # This has to be merged with the root FS of the linux distribution you will
-# be using, for instance using:
-#  mount -t overlay overlay -olowerdir=/path/to/d02_optee/install,/path/to/Debian_ARM64_ro \
-#                           -oupperdir=/path/to/Debian_ARM64_rw /path/to/Debian_ARM64_merged
+# be using, for instance using the overlay FS and exporting via NFS
+# (see README.md)
+# !!! Overly FS does not work. I tried creating it with:
+# sudo mount -t overlay overlay -olowerdir=./Debian_ARM64_lower \
+#            -oupperdir=./Debian_ARM64_upper -oworkdir=./Debian_ARM64_work \
+#             ./Debian_ARM64
+# ...and exporting via NFS. Kernel hangs when trying to mount root FS.
+# If I unmount the Overlay FS, and "ln -s Debian_ARM64_lower Debian_ARM64"
+# then "sudo service nfs-kernel-server restart", it works.
 
 INSTALL_DIR = install
 
-all: arm-trusted-firmware grub linux optee-client optee-os
+.PHONY: install
+install: all
+
+all: arm-trusted-firmware grub linux optee-client optee-os uefi
 
 help:
 	@echo TODO
@@ -80,15 +91,20 @@ distclean: distclean-grub
 # ARM Trusted Firmware
 #
 
+BL1 = arm-trusted-firmware/build/d02/debug/bl1.bin
 BL32 = optee_os/out/arm-plat-d02/core/tee.bin
+FIP = arm-trusted-firmware/build/d02/debug/fip.bin
 
 ARMTF_FLAGS := PLAT=d02
-ARMTF_FLAGS += SPD=opteed
 ARMTF_FLAGS += DEBUG=1
-#ARMTF_FLAGS += LOG_LEVEL=40
+ARMTF_FLAGS += LOG_LEVEL=50 # 10=error 20=notice 30=warning 40=info 50=verbose
 
 ARMTF_EXPORTS += CROSS_COMPILE='$(CROSS_COMPILE64)'
+
+ifneq (,$(BL32))
+ARMTF_FLAGS += SPD=opteed
 ARMTF_EXPORTS += BL32=$(CURDIR)/$(BL32)
+endif
 
 define arm-tf-make
 	+$(Q)export $(ARMTF_EXPORTS) ; \
@@ -112,7 +128,7 @@ clean: clean-arm-trusted-firmware
 
 optee-os-flags := PLATFORM=d02
 optee-os-flags += DEBUG=0
-optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=2 # 0=none 1=err 2=info 3=debug 4=flow
+optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=3 # 0=none 1=err 2=info 3=debug 4=flow
 optee-os-flags += CFG_TEE_TA_LOG_LEVEL=3
 optee-os-flags += CFG_ARM64_core=y
 optee-os-flags += CROSS_COMPILE32="$(CROSS_COMPILE32)" CROSS_COMPILE64="$(CROSS_COMPILE64)"
@@ -239,4 +255,48 @@ clean-linux:
 	$(Q)rm -f linux/.config
 
 clean: clean-linux
+
+#
+# UEFI
+#
+
+UEFI_BIN = uefi/OpenPlatformPkg/Platforms/Hisilicon/Binary/D02
+UEFI_BL1 = $(UEFI_BIN)/bl1.bin
+UEFI_FIP = $(UEFI_BIN)/fip.bin
+
+.PHONY: uefi-check-arm-tf-links
+uefi-check-arm-tf-links:
+	$(ECHO) '  CHECK    $(UEFI_BL1)'
+	$(Q)if [ ! -L $(UEFI_BL1) ] ; then \
+	        $(_ECHO) '  RM  $(UEFI_BL1)' ; \
+	        rm -f $(UEFI_BL1) ; \
+	        $(_ECHO) '  LN      $(UEFI_BL1)' ; \
+	        ln -s $(CURDIR)/$(BL1) $(UEFI_BL1) ; \
+	    fi
+	$(ECHO) '  CHECK    $(UEFI_FIP)'
+	$(Q)if [ ! -L $(UEFI_FIP) ] ; then \
+	        $(_ECHO) '  RM       $(UEFI_FIP)' ; \
+	        rm -f $(UEFI_FIP) ; \
+	        $(_ECHO) '  LN      $(UEFI_FIP)' ; \
+	        ln -s $(CURDIR)/$(FIP) $(UEFI_FIP) ; \
+	    fi
+
+# ARM Trusted Firmware is a prerequisite, because the final BIOS binary
+# is UEFI (PV660D02.fd) and this file contains the ARM TF output (bl1.bin,
+# fip.bin).
+.PHONY: uefi
+uefi: arm-trusted-firmware uefi-check-arm-tf-links
+	$(ECHO) '  BUILD   $@'
+	$(Q)export GCC49_AARCH64_PREFIX="$(CROSS_COMPILE64)" ; \
+	    cd uefi ; \
+	    ./uefi-tools/uefi-build.sh -b DEBUG -c LinaroPkg/platforms.config d02
+
+.PHONY: clean-uefi
+clean-uefi:
+	$(ECHO) '  RESTORE $(UEFI_BL1)'
+	$(Q)rm -f $(UEFI_BL1) ; cd $(UEFI_BIN) && git co bl1.bin
+	$(ECHO) '  RESTORE $(UEFI_FIP)'
+	$(Q)rm -f $(UEFI_FIP) ; cd $(UEFI_BIN) && git co fip.bin
+
+clean: clean-uefi
 
