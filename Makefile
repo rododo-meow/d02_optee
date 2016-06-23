@@ -30,7 +30,7 @@ CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 # If I unmount the Overlay FS, and "ln -s Debian_ARM64_lower Debian_ARM64"
 # then "sudo service nfs-kernel-server restart", it works.
 
-INSTALL_DIR = install
+DESTDIR = $(CURDIR)/install
 
 .PHONY: install
 install: all
@@ -160,8 +160,8 @@ optee-client:
 .PHONY: install-optee-client
 install-optee-client: optee-client
 	$(ECHO) '  INSTALL $@'
-	$(Q)mkdir -p $(INSTALL_DIR)
-	$(Q)$(MAKE) -C optee_client $(optee-client-flags) install EXPORT_DIR=$(CURDIR)/$(INSTALL_DIR)
+	$(Q)mkdir -p $(DESTDIR)
+	$(Q)$(MAKE) -C optee_client $(optee-client-flags) install EXPORT_DIR=$(DESTDIR)
 
 install: install-optee-client
 
@@ -207,7 +207,7 @@ optee-test-do-patch:
 
 .PHONY: install-optee-test
 install-optee-test: optee-test
-	$(Q)$(MAKE) -C optee_test $(optee-test-flags) install DESTDIR=$(CURDIR)/$(INSTALL_DIR)
+	$(Q)$(MAKE) -C optee_test $(optee-test-flags) install DESTDIR=$(DESTDIR)
 
 install: install-optee-test
 
@@ -231,9 +231,9 @@ linux-flags := CROSS_COMPILE="$(CROSS_COMPILE64)" ARCH=arm64
 .PHONY: install-linux
 install-linux: linux
 	$(ECHO) '  INSTALL $@'
-	$(Q)mkdir -p $(INSTALL_DIR)
-	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(CURDIR)/$(INSTALL_DIR)
-	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(CURDIR)/$(INSTALL_DIR)/lib/firmware
+	$(Q)mkdir -p $(DESTDIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(DESTDIR)
+	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(DESTDIR)/lib/firmware
 
 install: install-linux
 
