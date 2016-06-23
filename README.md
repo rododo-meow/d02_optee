@@ -1,4 +1,3 @@
-
 # OP-TEE on the Hisilicon D02 board
 
 ## Introduction
@@ -13,7 +12,7 @@ the Hisilicon D02 board.
 Here you will find:
 
 - Git submodules to various software: ARM Trusted Firmware, UEFI, Linux,
-OP-TEE OS and client library and tests
+Grub, OP-TEE OS and client library and tests
 - A Makefile to generate everything
 
 Not everything is built from sources for various reasons. The following is a
@@ -32,8 +31,8 @@ hardware plaftorm. It is built from the kernel sources in `./linux`.
 from sources (./grub).
   5. `grub.cfg` is the GRUB configuration file, you can define boot entries
 there or change the kernel command line parameters. It is a source file.
-  6. `Debian_ARM64.tar.gz` is a complete Debian 8 root filesystem. It is
-downloaded pre-built.
+  6. `Debian_ARM64.tar.gz` is a complete Debian 8 root filesystem. It can be
+downloaded pre-built from http://open-estuary.org/. 
   7. The OP-TEE client library (`libteec.so.1.0`) is built from sources
 (`./optee_client`).
   8. The OP-TEE test application (`xtest`) and the Trusted Applications
@@ -62,9 +61,22 @@ make
 
 ## How to run
 
+Install into the folder where you have extracted the Debian distribution.
+You can download `Debian_ARM64.tar.gz` from the Open Estuary site.
+
+```
+make install DESTDIR=/path/to/Debian_ARM64
+```
+
 TODO.
-PyPXE to set up a PXE environment.
-FTPd to get and flash new BIOS and DTB from the EBL menu.
-NFS to mount the root FS, such as Debian (link to pre-built tarball).
-Try overlay FS to merge files with distribution.
+- Use PyPXE to set up a PXE environment.
+- Start FTPd to get and flash new BIOS (PV660D02.fd) and DTB (hip05-d02.dtb)
+from the EBL menu.
+- Configure NFS to export the root FS, such as Debian (Debian_ARM64 folder)
+so that the kernel can mount root over NFS.
+
+## Links
+
+- PyPXE: https://github.com/psychomario/pypxe
+- Open Estuary: http://open-estuary.org/
 
