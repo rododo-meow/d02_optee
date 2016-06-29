@@ -41,7 +41,7 @@ install: all install-only
 .PHONY:
 install-only:
 
-all: arm-trusted-firmware grub linux optee-client optee-os uefi
+all: arm-trusted-firmware grub linux optee-client optee-os uefi optee-test
 
 help:
 	@echo TODO
