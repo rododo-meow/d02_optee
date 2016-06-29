@@ -29,11 +29,17 @@ CROSS_COMPILE64 ?= ccache aarch64-linux-gnu-
 # ...and exporting via NFS. Kernel hangs when trying to mount root FS.
 # If I unmount the Overlay FS, and "ln -s Debian_ARM64_lower Debian_ARM64"
 # then "sudo service nfs-kernel-server restart", it works.
+#
+# Example:
+#   make install DESTDIR=/home/jerome/work/d02/netboot/Debian_ARM64
 
 DESTDIR = $(CURDIR)/install
 
 .PHONY: install
-install: all
+install: all install-only
+
+.PHONY:
+install-only:
 
 all: arm-trusted-firmware grub linux optee-client optee-os uefi
 
@@ -162,8 +168,15 @@ install-optee-client: optee-client
 	$(ECHO) '  INSTALL $@'
 	$(Q)mkdir -p $(DESTDIR)
 	$(Q)$(MAKE) -C optee_client $(optee-client-flags) install EXPORT_DIR=$(DESTDIR)
+	$(ECHO) '  INSTALL $(DESTDIR)/etc/init.d/optee'
+	$(Q)mkdir -p $(DESTDIR)/etc/init.d
+	$(Q)cp init.d.optee $(DESTDIR)/etc/init.d/optee
+	$(Q)chmod a+x $(DESTDIR)/etc/init.d/optee
+	$(ECHO) '  LN      $(DESTDIR)/etc/rc5.d/S99optee'
+	$(Q)mkdir -p $(DESTDIR)/etc/rc5.d
+	$(Q)ln -s /etc/init.d/optee $(DESTDIR)/etc/rc5.d/S99optee
 
-install: install-optee-client
+install-only: install-optee-client
 
 .PHONY: clean-optee-client
 clean-optee-client:
@@ -209,7 +222,7 @@ optee-test-do-patch:
 install-optee-test: optee-test
 	$(Q)$(MAKE) -C optee_test $(optee-test-flags) install DESTDIR=$(DESTDIR)
 
-install: install-optee-test
+install-only: install-optee-test
 
 .PHONY: clean-optee-test
 clean-optee-test:
@@ -235,7 +248,7 @@ install-linux: linux
 	$(Q)$(MAKE) -C linux $(linux-flags) modules_install INSTALL_MOD_PATH=$(DESTDIR)
 	$(Q)$(MAKE) -C linux $(linux-flags) firmware_install INSTALL_FW_PATH=$(DESTDIR)/lib/firmware
 
-install: install-linux
+install-only: install-linux
 
 .PHONY: linux
 linux: linux/.config
