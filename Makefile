@@ -259,7 +259,7 @@ linux: linux/.config
 linux/.config:
 	$(ECHO) '  GEN     $@'
 	$(Q)$(MAKE) -C linux $(linux-flags) defconfig
-	$(Q)cd linux ; ./scripts/config --enable TEE --enable OPTEE
+	$(Q)cd linux ; ./scripts/config --enable TEE --enable OPTEE --enable DRM
 
 clean-linux:
 	$(ECHO) '  CLEAN   $@'
