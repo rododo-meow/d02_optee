@@ -46,7 +46,14 @@ GRUB is also modified to work with PyPXE -- this is not related to OP-TEE.
 
 ## Prerequisites
 
-TODO: list cross-compiler & tools.
+Tools:
+	- gcc-aarch64-linux-gnu
+	- gcc-arm-linux-gnueabihf
+	- ccache
+	- python-wand
+	- autoconf
+	- uuid-dev
+	- acpica-tools
 
 ```
 git submodule init
