@@ -175,7 +175,7 @@ install-optee-client: optee-client
 	$(Q)chmod a+x $(DESTDIR)/etc/init.d/optee
 	$(ECHO) '  LN      $(DESTDIR)/etc/rc5.d/S99optee'
 	$(Q)mkdir -p $(DESTDIR)/etc/rc5.d
-	$(Q)ln -s /etc/init.d/optee $(DESTDIR)/etc/rc5.d/S99optee
+	$(Q)ln -f -s /etc/init.d/optee $(DESTDIR)/etc/rc5.d/S99optee
 
 install-only: install-optee-client
 
@@ -308,9 +308,9 @@ uefi: arm-trusted-firmware uefi-check-arm-tf-links
 .PHONY: clean-uefi
 clean-uefi:
 	$(ECHO) '  RESTORE $(UEFI_BL1)'
-	$(Q)rm -f $(UEFI_BL1) ; cd $(UEFI_BIN) && git co bl1.bin
+	$(Q)rm -f $(UEFI_BL1) ; cd $(UEFI_BIN) && git checkout bl1.bin
 	$(ECHO) '  RESTORE $(UEFI_FIP)'
-	$(Q)rm -f $(UEFI_FIP) ; cd $(UEFI_BIN) && git co fip.bin
+	$(Q)rm -f $(UEFI_FIP) ; cd $(UEFI_BIN) && git checkout fip.bin
 
 clean: clean-uefi
 
